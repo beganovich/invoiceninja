@@ -279,6 +279,7 @@ class InstantPayment
         if ($is_credit_payment) {
             return $this->processCreditPayment($this->request, $data);
         }
+        
 
         try {
             return $gateway

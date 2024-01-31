@@ -990,4 +990,11 @@ class StripePaymentDriver extends BaseDriver
             return mb_convert_encoding(pack('H*', $matches[1]), 'UTF-8', 'UCS-2BE');
         }, $string);
     }
+
+    // 
+
+    public function getRequiredFieldsForm()
+    {
+        return $this->payment_method->getRequiredFieldsForm();
+    }
 }

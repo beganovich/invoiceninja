@@ -348,6 +348,10 @@
                         @else
                            <small class="mt-4 block">{{ $this->not_eligible_message }}</small>
                         @endif
+
+                        @if($rff)
+                           @livewire($rff)
+                        @endif
                         
                     </div>
 

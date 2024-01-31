@@ -205,4 +205,11 @@ class CreditCard
             return $this->stripe->processInternallyFailedPayment($this->stripe, $e);
         }
     }
+
+    // 
+
+    public function getRequiredFieldsForm(): string
+    {
+        return 'gateways.required-fields.stripe.credit-card';
+    }
 }

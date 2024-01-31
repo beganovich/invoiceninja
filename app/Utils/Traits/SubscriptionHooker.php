@@ -31,7 +31,7 @@ trait SubscriptionHooker
         }
 
         if (count($subscription->webhook_configuration['post_purchase_headers']) >= 1) {
-            $headers = array_merge($headers, $subscription->webhook_configuration['post_purchase_headers']);
+            // $headers = array_merge($headers, $subscription->webhook_configuration['post_purchase_headers']);
         }
 
         $client = new \GuzzleHttp\Client(

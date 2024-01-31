@@ -19,6 +19,7 @@ use App\Libraries\MultiDB;
 use App\Mail\Subscription\OtpCode;
 use App\Models\Client;
 use App\Models\ClientContact;
+use App\Models\CompanyGateway;
 use App\Models\Invoice;
 use App\Models\RecurringInvoice;
 use App\Models\Subscription;
@@ -31,6 +32,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Laracasts\Presenter\Exceptions\PresenterException;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class BillingPortalPurchasev2 extends Component
@@ -164,6 +166,7 @@ class BillingPortalPurchasev2 extends Component
     public $payment_confirmed = false;
     public $is_eligible = true;
     public $not_eligible_message = '';
+    public string|null $rff;
 
     public function mount()
     {
@@ -230,8 +233,8 @@ class BillingPortalPurchasev2 extends Component
         }
 
         $contact = ClientContact::where('email', $this->email)
-                                ->where('company_id', $this->subscription->company_id)
-                                ->first();
+            ->where('company_id', $this->subscription->company_id)
+            ->first();
 
         if ($contact) {
             Auth::guard('contact')->loginUsingId($contact->id, true);
@@ -319,7 +322,7 @@ class BillingPortalPurchasev2 extends Component
                 'product_key' => $p->product_key,
                 'unit_cost' => $p->price,
                 'product' => substr(strip_tags($p->markdownNotes()), 0, 50),
-                'price' => Number::formatMoney($total, $this->subscription->company).' / '. RecurringInvoice::frequencyForKey($this->subscription->frequency_id),
+                'price' => Number::formatMoney($total, $this->subscription->company) . ' / ' . RecurringInvoice::frequencyForKey($this->subscription->frequency_id),
                 'total' => $total,
                 'qty' => $qty,
                 'is_recurring' => true,
@@ -360,7 +363,7 @@ class BillingPortalPurchasev2 extends Component
                         'product_key' => $p->product_key,
                         'unit_cost' => $p->price,
                         'product' => substr(strip_tags($p->markdownNotes()), 0, 50),
-                        'price' => Number::formatMoney($total, $this->subscription->company).' / '. RecurringInvoice::frequencyForKey($this->subscription->frequency_id),
+                        'price' => Number::formatMoney($total, $this->subscription->company) . ' / ' . RecurringInvoice::frequencyForKey($this->subscription->frequency_id),
                         'total' => $total,
                         'qty' => $qty,
                         'is_recurring' => true
@@ -456,7 +459,7 @@ class BillingPortalPurchasev2 extends Component
      */
     public function updated($propertyName): self
     {
-        if (in_array($propertyName, ['login','email'])) {
+        if (in_array($propertyName, ['login', 'email'])) {
             return $this;
         }
 
@@ -494,15 +497,22 @@ class BillingPortalPurchasev2 extends Component
      */
     public function handleMethodSelectingEvent($company_gateway_id, $gateway_type_id)
     {
-        $this->payment_confirmed = true;
-
         $this->company_gateway_id = $company_gateway_id;
         $this->payment_method_id = $gateway_type_id;
 
-        $this->handleBeforePaymentEvents();
+        $this->handleRequiredFields();
+    }
 
-        $this->dispatch('beforePaymentEventsCompleted');
+    public function handleRequiredFields(): self
+    {
+        $gateway = CompanyGateway::query()->find($this->company_gateway_id);
 
+        $this->rff = $gateway
+            ->driver($this->contact->client)
+            ->setPaymentMethod($this->payment_method_id)
+            ->getRequiredFieldsForm();
+
+        return $this;
     }
 
     /**
@@ -510,8 +520,11 @@ class BillingPortalPurchasev2 extends Component
      *
      * @return self
      */
+    #[On('handleBeforePaymentEvents')]
     public function handleBeforePaymentEvents(): self
     {
+        $this->payment_confirmed = true;
+
         $eligibility_check = $this->subscription->service()->isEligible($this->contact);
 
         if (is_array($eligibility_check) && $eligibility_check['message'] != 'Success') {
@@ -524,10 +537,12 @@ class BillingPortalPurchasev2 extends Component
         $data = [
             'client_id' => $this->contact->client->hashed_id,
             'date' => now()->format('Y-m-d'),
-            'invitations' => [[
-                'key' => '',
-                'client_contact_id' => $this->contact->hashed_id,
-            ]],
+            'invitations' => [
+                [
+                    'key' => '',
+                    'client_contact_id' => $this->contact->hashed_id,
+                ]
+            ],
             'user_input_promo_code' => $this->coupon,
             'coupon' => empty($this->subscription->promo_code) ? '' : $this->coupon,
         ];
@@ -553,6 +568,8 @@ class BillingPortalPurchasev2 extends Component
             'campaign' => $this->campaign,
             'bundle' => $this->bundle,
         ], now()->addMinutes(60));
+
+        $this->dispatch('beforePaymentEventsCompleted');
 
         return $this;
     }
@@ -601,12 +618,12 @@ class BillingPortalPurchasev2 extends Component
         $invoice->number = null;
 
         $invoice->service()
-                ->markPaid()
-                ->save();
+            ->markPaid()
+            ->save();
 
         return $this->subscription
-                    ->service()
-                    ->handleNoPaymentFlow($invoice, $this->bundle, $this->contact);
+            ->service()
+            ->handleNoPaymentFlow($invoice, $this->bundle, $this->contact);
     }
 
 
@@ -701,7 +718,7 @@ class BillingPortalPurchasev2 extends Component
             })->first();
 
             if ($record) {
-                $data['settings']['language_id'] = (string)$record->id;
+                $data['settings']['language_id'] = (string) $record->id;
             }
         }
 
