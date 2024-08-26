@@ -9,7 +9,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-e0713224.js",
+    "file": "assets/app-234e3402.js",
     "imports": [
       "_index-08e160a7.js",
       "__commonjsHelpers-725317a4.js"
@@ -240,7 +240,7 @@
     "src": "resources/js/setup/setup.js"
   },
   "resources/sass/app.scss": {
-    "file": "assets/app-8e387ada.css",
+    "file": "assets/app-fee1da41.css",
     "isEntry": true,
     "src": "resources/sass/app.scss"
   }
